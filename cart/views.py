@@ -72,6 +72,15 @@ class DeleteFromCartView(APIView):
 
         return Response({"detail": f"{quantity} {material.name} прибрано з корзини."}, status=status.HTTP_200_OK)
 
+class ClearCartView(APIView):
+    permission_classes = [IsAuthenticated]
+    @swagger_auto_schema(request_body=None, responses={204:'No content'})
+    def post(self, request, *args, **kwargs):
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+        cart.clear_cart()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class CartView(APIView):
     permission_classes = [IsAuthenticated]
     @swagger_auto_schema(
@@ -96,11 +105,11 @@ class CreateOrderView(APIView):
             cart = Cart.objects.get(user=request.user)
         except Cart.DoesNotExist:
             return Response({"detail": "Корзина користувача ще не існує"}, status=status.HTTP_400_BAD_REQUEST)
-        for item in cart.items.all().select_related('material'):
-            save_cart_item(item)
         
-        cart_items = cart.items.all().select_related('material') 
-        if len(cart_items) == 0:
+        cart_items = list(cart.items.all().select_related('material')) 
+        for item in cart_items:
+            save_cart_item(item)
+        if not any(item.pk is not None for item in cart_items):
             return Response({'detail':"Корзина користувача пуста"}, status=status.HTTP_400_BAD_REQUEST)
 
         order = Order.objects.create(user=request.user)

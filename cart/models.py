@@ -22,9 +22,8 @@ class Cart(models.Model):
     class Meta:
         verbose_name = 'Корзина'
         verbose_name_plural = 'Корзини'
-        ordering = ['-created_at']
+        ordering = ['-updated_at']
 
-    
 class CartItem(models.Model):
     cart = models.ForeignKey(to=Cart, verbose_name="Корзина",on_delete=models.CASCADE, related_name='items', related_query_name='item')
     material = models.ForeignKey(to=Material, on_delete=models.CASCADE,related_name='cartitems', related_query_name='cartitem', verbose_name='Матеріал')
