@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     # third-party packages
     'drf_yasg',
     'rest_framework_simplejwt',
+    'django_elasticsearch_dsl'
 ]
 
 MIDDLEWARE = [
@@ -119,3 +120,10 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': False,
 }
 
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'https://localhost:9200/',
+        'http_auth': ('elastic','CvIPqdxuNsDl+F59yN=A'),
+        'verify_certs': False
+    },
+}

@@ -1,12 +1,14 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db.models import Sum
 from rest_framework import status
 from rest_framework import serializers
 from drf_yasg.utils import swagger_auto_schema
 from cart.serializers import AddToCartSerializer, CartSerializer, OrderSerializer
 from inventory.models import Material
-from users.models import RoleChoices
+from inventory.permissions import IsAdminOrAnalytic
+from users.models import RoleChoices, User
 from .models import Cart, CartItem, Order, OrderItem
 from django.db import models
 
@@ -156,3 +158,45 @@ class OrderDetailView(APIView):
         serializer = OrderSerializer(order)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+class MaterialSalesAnalyticsView(APIView):
+    # permission_classes = [IsAdminOrAnalytic]
+
+    def get(self, request, material_id:int,*args, **kwargs):
+        
+        sales_data = OrderItem.objects.select_related('material').\
+            values('material__id','material__name').annotate(total_quantity_sold=Sum('quantity'), 
+                                                            total_sales_value=Sum(models.F("price_per_unit")*models.F("quantity")))
+        try:
+            sales_data = sales_data.get(material__id=material_id)
+        except Exception as e:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(sales_data)
+    
+
+class CategorySalesAnalyticsView(APIView):
+    # permission_classes = [IsAdminOrAnalytic]
+
+    def get(self, request, category_id:int, *args, **kwargs):
+        sales_data = OrderItem.objects.select_related('material','material__category').values('material__category__id', 'material__category__name').annotate(total_quantity_sold=Sum('quantity'), 
+                                                            total_sales_value=Sum(models.F("price_per_unit")*models.F("quantity")))
+        try:
+            sales_data = sales_data.get(material__category__id=category_id)
+        except Exception as e:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        return Response(sales_data)
+    
+
+class UserSalesAnalyticsView(APIView):
+    def get(self, request, user_id:int, *args, **kwargs):
+        orders = Order.objects.filter(user_id=user_id).all()
+        if not len(orders):
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        total_price_sum = sum(order.total_price for order in orders)
+        total_quantity_sum = OrderItem.objects.filter(order__in=orders).aggregate(total_quantity=Sum('quantity')).get('total_quantity') or 0
+        
+        return Response({
+            'orders': OrderSerializer(orders,many=True).data,
+            'total_price': total_price_sum,
+            'total_quantity': total_quantity_sum
+        })

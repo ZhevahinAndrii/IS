@@ -49,7 +49,7 @@ class CartItem(models.Model):
 
         
 class Order(models.Model):
-    user = models.ForeignKey(to=get_user_model(), on_delete=models.CASCADE, verbose_name='Автор замовлення')
+    user = models.ForeignKey(to=get_user_model(), on_delete=models.CASCADE, verbose_name='Автор замовлення', related_name='orders')
     created_at = models.DateTimeField(verbose_name='Дата створення', auto_now_add=True)
 
     @property
